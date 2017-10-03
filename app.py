@@ -2,12 +2,25 @@
 
 from flask import Flask, render_template, redirect, url_for, request, session, flash
 from functools import wraps
+from flaskext.mysql import MySQL
 
 # Create application object
+
+mysql = MySQL()
+
 app = Flask(__name__)
+app.config['MYSQL_DATABASE_USER'] = 'root'
+app.config['MYSQL_DATABASE_PASSWORD'] = 'root'
+app.config['MYSQL_DATABASE_DB'] = 'UserData'
+app.config['MYSQL_DATABASE_HOST'] = 'localhost'
+mysql.init_app(app)
+ 
 
 # VERY BAD. FIX THIS LATER, need random key generator. Also separate config file...
 app.secret_key = "secret key"	# need secret key for sessions to work properly
+
+
+
 
 # Login required
 def login_required(f):
@@ -26,6 +39,7 @@ def home():
     return render_template('index.html')
 
 @app.route('/welcome')
+@login_required
 def welcome():
     return render_template('welcome.html')
 
@@ -39,7 +53,12 @@ def login():
 	error = None
 	if request.method == 'POST':
 		# admin, admin for now....
-		if request.form['username'] != 'admin' or request.form['password'] != 'admin':
+		username = request.form['username']
+		password = request.form['password']
+		cursor = mysql.connect().cursor()
+		cursor.execute("SELECT * from USER where Username='" + username + "' and Password='" + password + "'")
+		data = cursor.fetchone()
+		if data is None:
 			error = 'Invalid credentials. Please try again.'
 		else:
 			session['logged_in'] = True
